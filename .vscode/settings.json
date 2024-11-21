@@ -1,0 +1,7 @@
+{
+    "java.compile.nullAnalysis.mode": "automatic",
+    "rust-analyzer.linkedProjects": [
+        "core/src/main/rust/demo/Cargo.toml"
+    ],
+    "java.configuration.updateBuildConfiguration": "interactive"
+}

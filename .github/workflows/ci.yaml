@@ -1,0 +1,137 @@
+on:
+  merge_group:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "docs/**"
+      - "config/**"
+      - "**.md"
+      - ".dockerignore"
+      - "docker/**"
+      - ".gitignore"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - "config/**"
+      - "**.md"
+      - ".dockerignore"
+      - "docker/**"
+      - ".gitignore"
+  workflow_dispatch:
+
+name: CI
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  RUST_TOOLCHAIN: nightly-2024-10-19
+  RUST_PROJECT_HOME: core/src/main/rust/demo
+
+jobs:
+  typos:
+    name: Spell Check with Typos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: crate-ci/typos@v1.13.10
+
+  check:
+    name: Check
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v3
+      - uses: arduino/setup-protoc@v3
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+      - name: Run cargo check
+        run: |
+          cd ${{ env.RUST_PROJECT_HOME }}
+          cargo check --locked --workspace --all-targets
+
+  toml:
+    name: Toml Check
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+      - name: Install taplo
+        run: |
+          cd ${{ env.RUST_PROJECT_HOME }}
+          cargo +stable install taplo-cli --version ^0.8 --locked
+          taplo format --check
+
+  fmt:
+    name: Rustfmt
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+      - name: Run cargo fmt
+        run: |
+          cd ${{ env.RUST_PROJECT_HOME }}
+          cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v3
+      - uses: arduino/setup-protoc@v3
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: clippy
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+      - name: Run cargo clippy
+        run: |
+          cd ${{ env.RUST_PROJECT_HOME }}
+          cargo clippy --version
+          cargo clippy --workspace --all-targets -- -D warnings
+
+  build:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v3
+      - uses: arduino/setup-protoc@v3
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+      - name: Set up Java
+        uses: actions/setup-java@v2
+        with:
+          java-version: "17"
+          distribution: "zulu"
+          architecture: x64
+          cache: maven
+      - name: Build with Maven
+        run: mvn --batch-mode --update-snapshots package

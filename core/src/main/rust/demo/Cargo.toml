@@ -1,0 +1,25 @@
+[package]
+name = "demo"
+version = "0.1.0"
+edition = "2021"
+authors = ["GreptimeTeam"]
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[lints]
+clippy.macro-metavars-in-unsafe = "allow"
+
+[dependencies]
+futures = "0.3"
+jni = { git = "https://github.com/jni-rs/jni-rs.git", rev = "9278710b5d8a580f24d4b06c02ff7fb86b0821a9" }
+log = "0.4"
+num_cpus = "1.16"
+reqwest = "0.12"
+snafu = "0.8"
+tokio = { version = "1.40", features = ["full"] }
+
+[dev-dependencies]
+jni = { git = "https://github.com/jni-rs/jni-rs.git", rev = "9278710b5d8a580f24d4b06c02ff7fb86b0821a9", features = [
+    "invocation",
+] }
